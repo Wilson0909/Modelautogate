@@ -1,0 +1,2 @@
+2025-11-08 23:08:04.126840 - PDF dibuat & diproteksi: D:\KULIAH\Sem 5\EXPO PROJECT\smart_gate_ai\modules\..\reports\records\log_kendaraan\laporan_2025-11-08_23-08.pdf
+2025-11-08 23:08:14.534424 - PDF dikirim ke huanqarman@gmail.com
