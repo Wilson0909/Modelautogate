@@ -6,8 +6,7 @@ import cv2
 import re
 import numpy as np
 
-# === Load model lokal ===
-yolo_model = YOLO(r"/Users/wilsonzeng/Documents/smart_gate_ai/smart_gate_ai/models/license_plate_detector.pt")
+yolo_model = YOLO(r"D:\KULIAH\Sem 5\EXPO PROJECT\smart_gate_ai\models\license_plate_detector.pt")
 processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-printed")
 ocr_model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-base-printed")
 
@@ -71,3 +70,4 @@ def recognize_plate(frame):
     except Exception as e:
         print(f"[ERROR OCR] {e}")
         return None, 0.0, None
+    

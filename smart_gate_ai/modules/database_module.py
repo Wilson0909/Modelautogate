@@ -3,31 +3,50 @@ import os
 from datetime import datetime
 from smart_gate_ai.firebase_init import db
 
-# Path ke SQLite
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+# ================================
+# KONFIGURASI PATH DATABASE SQLITE
+# ================================
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))   # folder smart_gate_ai/
 DB_PATH = os.path.join(BASE_DIR, "db", "smartgate.db")
 
 def get_connection():
     return sqlite3.connect(DB_PATH)
 
+
+# ================================
+# INISIALISASI DATABASE
+# ================================
 def init_db():
     conn = get_connection()
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS kendaraan (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    plat TEXT,
-                    status TEXT,
-                    waktu_masuk TEXT,
-                    waktu_keluar TEXT
-                )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS plat_terdaftar (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    nama TEXT,
-                    plat TEXT
-                )''')
+
+    # Tabel log kendaraan
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS kendaraan (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plat TEXT,
+            status TEXT,
+            waktu_masuk TEXT,
+            waktu_keluar TEXT
+        )
+    ''')
+
+    # Tabel master plat terdaftar
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS plat_terdaftar (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nama TEXT,
+            plat TEXT UNIQUE
+        )
+    ''')
+
     conn.commit()
     conn.close()
 
+
+# ================================
+# TAMBAH DATA PLAT KE LOKAL + FIREBASE
+# ================================
 def tambah_plat_manual(nama, plat):
     conn = get_connection()
     c = conn.cursor()
@@ -41,33 +60,47 @@ def tambah_plat_manual(nama, plat):
         conn.close()
         return
 
+    # simpan lokal SQLite
     c.execute("INSERT INTO plat_terdaftar (nama, plat) VALUES (?, ?)", (nama, plat))
-    
-    # ambil ID SQLite terakhir
     row_id = c.lastrowid
-
     conn.commit()
     conn.close()
 
     print(f"[✅] Plat '{plat}' milik '{nama}' berhasil ditambahkan! (ID={row_id})")
 
-    # SIMPAN KE FIREBASE DENGAN ID YANG SAMA
+    # simpan Firebase
     db.collection("plat_terdaftar").document(str(row_id)).set({
         "id": row_id,
         "nama": nama,
         "plat": plat
     })
-    print("🔥 Firebase updated: Data plat_terdaftar ditambahkan!")
+    print("🔥 Firebase updated: plat_terdaftar ditambahkan!")
 
+
+# ================================
+# CEK PLAT TERDAFTAR
+# ================================
 def cek_plat(plat):
     conn = get_connection()
     c = conn.cursor()
-    c.execute("SELECT * FROM plat_terdaftar WHERE plat=?", (plat,))
-    data = c.fetchone()
-    conn.close()
-    return data
 
-# 🔥 kirim ke Firebase (pakai id SQLite)
+    c.execute("SELECT id, nama, plat FROM plat_terdaftar WHERE plat=?", (plat,))
+    row = c.fetchone()
+    conn.close()
+
+    if not row:
+        return None
+
+    return {
+        "id": row[0],
+        "nama": row[1],
+        "plat": row[2]
+    }
+
+
+# ================================
+# LOG KE FIREBASE
+# ================================
 def firebase_log(row_id, plat, status, waktu_masuk=None, waktu_keluar=None):
     data = {
         "id": row_id,
@@ -76,49 +109,61 @@ def firebase_log(row_id, plat, status, waktu_masuk=None, waktu_keluar=None):
         "waktu_masuk": waktu_masuk,
         "waktu_keluar": waktu_keluar
     }
+
     db.collection("smartgate_logs").document(str(row_id)).set(data)
     print("🔥 Firebase updated:", data)
 
+
+# ================================
+# CATAT KENDARAAN MASUK
+# ================================
 def catat_masuk(plat, status):
     conn = get_connection()
     c = conn.cursor()
+
     waktu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Simpan lokal SQLite
-    c.execute("INSERT INTO kendaraan (plat, status, waktu_masuk) VALUES (?, ?, ?)", 
+    c.execute("INSERT INTO kendaraan (plat, status, waktu_masuk) VALUES (?, ?, ?)",
               (plat, status, waktu))
 
-    row_id = c.lastrowid  # ambil ID auto increment
+    row_id = c.lastrowid
     conn.commit()
     conn.close()
 
-    # Simpan Firebase pakai id SQLite
     firebase_log(row_id, plat, "masuk", waktu_masuk=waktu)
 
-def catat_keluar(plat):
+
+# ================================
+# CATAT KENDARAAN KELUAR
+# ================================
+def catat_keluar(plat,status):
     conn = get_connection()
     c = conn.cursor()
+
     waktu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    c.execute("UPDATE kendaraan SET waktu_keluar=? WHERE plat=? AND waktu_keluar IS NULL",
-              (waktu, plat))
+    # update waktu keluar
+    c.execute("INSERT INTO kendaraan (plat, status, waktu_keluar) VALUES (?, ?, ?)",
+              (plat, status, waktu))
 
-    # Ambil kembali row ID kendaraan yg keluar
-    c.execute("SELECT id FROM kendaraan WHERE plat=? ORDER BY id DESC LIMIT 1", (plat,))
-    row_id = c.fetchone()[0]
+   
 
+    row_id = c.lastrowid
     conn.commit()
     conn.close()
 
-    # Simpan Firebase
     firebase_log(row_id, plat, "keluar", waktu_keluar=waktu)
 
+
+# ================================
+# RUN MANUAL SETUP
+# ================================
 if __name__ == "__main__":
     init_db()
     print("✅ Database berhasil diinisialisasi di:", DB_PATH)
 
     print("\n[Tambah Plat Manual]")
-    nama = input("Masukkan nama pemilik: ")
-    plat = input("Masukkan nomor plat: ").upper().replace(" ", "")
+    nama = input("Nama pemilik: ")
+    plat = input("Nomor plat: ").upper().replace(" ", "")
 
     tambah_plat_manual(nama, plat)
