@@ -1,7 +1,7 @@
 import serial
 import time
 
-SERIAL_PORT = "COM13"
+SERIAL_PORT = "COM9"
 BAUD_RATE = 9600
 
 try:

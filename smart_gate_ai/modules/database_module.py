@@ -81,37 +81,44 @@ def tambah_plat_manual(nama, plat):
 # CEK PLAT TERDAFTAR
 # ================================
 def cek_plat(plat):
-    conn = get_connection()
-    c = conn.cursor()
+    # Query Firestore berdasarkan field plat
+    results = db.collection("plat_terdaftar").where("plat", "==", plat).stream()
 
-    c.execute("SELECT id, nama, plat FROM plat_terdaftar WHERE plat=?", (plat,))
-    row = c.fetchone()
-    conn.close()
+    for doc in results:
+        data = doc.to_dict()
+        return {
+            "id": data.get("id"),
+            "nama": data.get("nama"),
+            "plat": data.get("plat"),
+        }
 
-    if not row:
-        return None
-
-    return {
-        "id": row[0],
-        "nama": row[1],
-        "plat": row[2]
-    }
+    return None
 
 
 # ================================
 # LOG KE FIREBASE
 # ================================
-def firebase_log(row_id, plat, status, waktu_masuk=None, waktu_keluar=None):
+def firebase_log_masuk(row_id, plat, status, waktu_masuk=None):
     data = {
         "id": row_id,
         "plat": plat,
         "status": status,
         "waktu_masuk": waktu_masuk,
+    }
+
+    db.collection("logs_masuk").document(str(row_id)).set(data)
+    print("🔥 Firebase updated kendaraan masuk:", data)
+    
+def firebase_log_keluar(row_id, plat, status,waktu_keluar=None):
+    data = {
+        "id": row_id,
+        "plat": plat,
+        "status": status,
         "waktu_keluar": waktu_keluar
     }
 
-    db.collection("smartgate_logs").document(str(row_id)).set(data)
-    print("🔥 Firebase updated:", data)
+    db.collection("logs_keluar").document(str(row_id)).set(data)
+    print("🔥 Firebase updated kendaraan keluar:", data)
 
 
 # ================================
@@ -130,7 +137,7 @@ def catat_masuk(plat, status):
     conn.commit()
     conn.close()
 
-    firebase_log(row_id, plat, "masuk", waktu_masuk=waktu)
+    firebase_log_masuk(row_id, plat, "masuk", waktu_masuk=waktu)
 
 
 # ================================
@@ -152,7 +159,7 @@ def catat_keluar(plat,status):
     conn.commit()
     conn.close()
 
-    firebase_log(row_id, plat, "keluar", waktu_keluar=waktu)
+    firebase_log_keluar(row_id, plat, "keluar", waktu_keluar=waktu)
 
 
 # ================================

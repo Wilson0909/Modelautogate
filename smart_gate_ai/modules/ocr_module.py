@@ -6,7 +6,7 @@ import cv2
 import re
 import numpy as np
 
-yolo_model = YOLO(r"D:\KULIAH\Sem 5\EXPO PROJECT\smart_gate_ai\models\license_plate_detector.pt")
+yolo_model = YOLO(r"C:\Users\Jimm\Modelautogate\smart_gate_ai\models\license_plate_detector.pt")
 processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-printed")
 ocr_model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-base-printed")
 
