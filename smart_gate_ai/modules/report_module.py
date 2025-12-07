@@ -141,7 +141,7 @@ def buat_laporan_pdf(tanggal_laporan=None):
         print("PDF dibuat:", filename)
 
         # KIRIM EMAIL
-        kirim_email_admin(filename)
+        kirim_email_admin(filename, tanggal_laporan)
 
     except Exception as e:
         tulis_log(f"PDF Error: {e}")
