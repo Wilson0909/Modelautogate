@@ -72,7 +72,6 @@
     - Tambah pengumuman  
     - Tambah user  
     - Lihat list kendaraan dan logs  
-    - Support multi-language / ubah bahasa  
 
 ---
 
