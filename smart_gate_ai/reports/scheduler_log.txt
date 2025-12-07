@@ -1,2 +1,47 @@
 2025-11-08 23:08:04.126840 - PDF dibuat & diproteksi: D:\KULIAH\Sem 5\EXPO PROJECT\smart_gate_ai\modules\..\reports\records\log_kendaraan\laporan_2025-11-08_23-08.pdf
 2025-11-08 23:08:14.534424 - PDF dikirim ke huanqarman@gmail.com
+2025-12-07 21:34:34.221885 - Error buat laporan PDF: unable to open database file
+2025-12-07 21:34:48.180053 - Error buat laporan PDF: unable to open database file
+2025-12-07 21:44:25.724042 - Error buat laporan PDF: Timeout of 300.0s exceeded, last exception: 503 Getting metadata from plugin failed with error: ('invalid_grant: Invalid JWT Signature.', {'error': 'invalid_grant', 'error_description': 'Invalid JWT Signature.'})
+2025-12-07 21:55:29.708814 - Error buat laporan PDF: Timeout of 300.0s exceeded, last exception: 503 Getting metadata from plugin failed with error: ('invalid_grant: Invalid JWT Signature.', {'error': 'invalid_grant', 'error_description': 'Invalid JWT Signature.'})
+2025-12-07 22:11:26.958389 - Error buat laporan PDF: Timeout of 300.0s exceeded, last exception: 503 Getting metadata from plugin failed with error: ('invalid_grant: Invalid JWT Signature.', {'error': 'invalid_grant', 'error_description': 'Invalid JWT Signature.'})
+2025-12-07 22:21:14.895890 - PDF logs_masuk & logs_keluar berhasil dibuat
+2025-12-07 22:21:19.345983 - Email laporan terkirim
+2025-12-07 22:38:25.008376 - Error PDF: Cannot overwrite input file. Open the file with pikepdf.open(..., allow_overwriting_input=True) to allow overwriting the input file.
+2025-12-07 22:39:01.811185 - Error PDF: Cannot overwrite input file. Open the file with pikepdf.open(..., allow_overwriting_input=True) to allow overwriting the input file.
+2025-12-07 22:43:13.869694 | PDF laporan kendaraan berhasil dibuat.
+2025-12-07 22:43:18.597217 | Email laporan terkirim.
+2025-12-07T22:55:01.361742 - PDF dibuat: D:\KULIAH\Sem 5\Modelautogate\smart_gate_ai\reports\records\log_kendaraan\laporan_gate_2025-12-07.pdf
+2025-12-07T22:55:48.314562 - PDF dibuat: D:\KULIAH\Sem 5\Modelautogate\smart_gate_ai\reports\records\log_kendaraan\laporan_gate_2025-12-07.pdf
+2025-12-07T22:59:35.666884 - Error buat_laporan_pdf: PermissionError(13, 'The process cannot access the file because it is being used by another process')
+2025-12-07T22:59:51.961114 - Error buat_laporan_pdf: NameError("name 'PDF_PASSWORD' is not defined")
+2025-12-07 23:07:15.449891 - PDF Berhasil Dibuat
+2025-12-07 23:07:20.472314 - Email terkirim
+2025-12-07 23:13:05.561282 | PDF laporan kendaraan berhasil dibuat.
+2025-12-07 23:13:10.155907 | Email laporan terkirim.
+2025-12-07T23:15:06.935860 - PDF dibuat: D:\KULIAH\Sem 5\Modelautogate\smart_gate_ai\reports\records\log_kendaraan\laporan_gate_2025-12-07.pdf
+2025-12-07T23:22:23.254848 - PDF dibuat: D:\KULIAH\Sem 5\Modelautogate\smart_gate_ai\reports\records\log_kendaraan\laporan_gate_2025-12-07.pdf
+2025-12-07 23:27:54.789533 | PDF laporan kendaraan berhasil dibuat.
+2025-12-07 23:27:58.954049 | Email laporan terkirim.
+2025-12-07T23:36:35.226548 - PDF dibuat.
+2025-12-07 23:47:58.975904 | PDF laporan kendaraan berhasil dibuat.
+2025-12-07 23:48:02.900204 | Email laporan terkirim.
+2025-12-07 23:50:20.329591 | PDF laporan kendaraan berhasil dibuat.
+2025-12-07 23:50:24.156263 | Email laporan terkirim.
+2025-12-07 23:51:03.753473 | PDF laporan kendaraan berhasil dibuat.
+2025-12-07 23:51:08.210151 | Email laporan terkirim.
+2025-12-07 23:53:43.689905 | Email laporan terkirim.
+2025-12-07 23:58:07.807323 | Email laporan terkirim.
+2025-12-07 23:58:47.995721 | Email laporan terkirim.
+2025-12-08 00:01:08.873029 | Email laporan terkirim.
+2025-12-08 00:11:20.448427 | PDF Error: Tidak ada log untuk tanggal 2025-12-08.
+2025-12-08 00:12:18.820534 | PDF Error: Tidak ada log untuk tanggal 2025-12-07.
+2025-12-08 00:13:06.443750 | PDF Error: Tidak ada log untuk tanggal 2025-12-07.
+2025-12-08 00:14:45.097047 | PDF Error: Tidak ada log untuk tanggal 2025-12-07.
+2025-12-08 00:15:01.196478 | PDF Error: Tidak ada log untuk tanggal 2025-12-08.
+2025-12-08 00:16:35.681742 | PDF Error: Tidak ada log untuk tanggal 2025-12-08.
+2025-12-08 00:16:50.362637 | PDF Error: Tidak ada log untuk tanggal 2025-12-08.
+2025-12-08 00:17:29.678806 | PDF Error: Tidak ada log untuk tanggal 2025-12-08.
+2025-12-08 00:18:02.599637 | PDF Error: Tidak ada log untuk tanggal 2025-12-07.
+2025-12-08 00:20:50.688599 | PDF laporan dibuat untuk tanggal 2025-12-07.
+2025-12-08 00:20:51.777191 | Email Error: (334, b'UGFzc3dvcmQ6')

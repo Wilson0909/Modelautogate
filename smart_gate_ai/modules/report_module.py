@@ -1,130 +1,148 @@
-import sqlite3
+# report_module.py
 from datetime import datetime
 import pandas as pd
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 import os
-import smtplib
-from email.message import EmailMessage
-from email.utils import make_msgid
 import pikepdf
-from dotenv import load_dotenv
-from email.mime.image import MIMEImage
+import firebase_admin
+from firebase_admin import credentials, firestore
+from .email_system import kirim_email_admin, tulis_log
 
-# Load environment variables
-load_dotenv()
-EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
-TO_EMAIL = os.getenv("TO_EMAIL")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PDF_PASSWORD = os.getenv("PDF_PASSWORD", "admin123")
 
-# ================= Log ===================
-def tulis_log(pesan):
-    """Tulis log aktivitas ke file scheduler_log.txt di folder reports"""
-    log_path = os.path.join(os.path.dirname(__file__), "../reports/scheduler_log.txt")
-    with open(log_path, "a", encoding="utf-8") as f:
-        f.write(f"{datetime.now()} - {pesan}\n")
+# ======================== FIREBASE ============================
+cred_path = os.path.join(BASE_DIR, "../serviceAccountKey.json")
+if not firebase_admin._apps:
+    cred = credentials.Certificate(cred_path)
+    firebase_admin.initialize_app(cred)
 
-# ================= PDF ===================
-def buat_laporan_pdf():
-    """Generate PDF harian dari database kendaraan dengan password."""
+db = firestore.client()
+
+# ======================== REGISTER FONTS =======================
+fonts_dir = os.path.join(BASE_DIR, "../assets/fonts")
+pdfmetrics.registerFont(TTFont("Poppins", os.path.join(fonts_dir, "Poppins-Regular.ttf")))
+pdfmetrics.registerFont(TTFont("Poppins-Bold", os.path.join(fonts_dir, "Poppins-Bold.ttf")))
+
+# ======================== PDF GENERATOR =======================
+def buat_laporan_pdf(tanggal_laporan=None):
+    """
+    Buat laporan PDF berdasarkan tanggal tertentu.
+    tanggal_laporan: str "YYYY-MM-DD". Jika None, otomatis pakai hari ini.
+    """
     try:
-        conn = sqlite3.connect("db/smartgate.db")
-        df = pd.read_sql_query("SELECT * FROM kendaraan", conn)
-        conn.close()
+        if tanggal_laporan is None:
+            tanggal_laporan = datetime.now().strftime("%Y-%m-%d")
 
-        tanggal = datetime.now().strftime("%Y-%m-%d")
-        reports_dir = os.path.join(os.path.dirname(__file__), "../reports")
+        data_list = []
+
+        # ambil data dari logs_masuk
+        logs_masuk = db.collection("logs_masuk").stream()
+        for doc in logs_masuk:
+            d = doc.to_dict()
+            waktu_masuk = d.get("waktu_masuk")
+            if hasattr(waktu_masuk, "strftime"):
+                waktu_masuk_str = waktu_masuk.strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                waktu_masuk_str = str(waktu_masuk) if waktu_masuk else "-"
+            if tanggal_laporan in waktu_masuk_str:
+                data_list.append([
+                    d.get("id", ""),
+                    d.get("plat", ""),
+                    d.get("status", ""),
+                    waktu_masuk_str,
+                    "-"
+                ])
+
+        # ambil data dari logs_keluar
+        logs_keluar = db.collection("logs_keluar").stream()
+        for doc in logs_keluar:
+            d = doc.to_dict()
+            waktu_keluar = d.get("waktu_keluar")
+            if hasattr(waktu_keluar, "strftime"):
+                waktu_keluar_str = waktu_keluar.strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                waktu_keluar_str = str(waktu_keluar) if waktu_keluar else "-"
+            if tanggal_laporan in waktu_keluar_str:
+                data_list.append([
+                    d.get("id", ""),
+                    d.get("plat", ""),
+                    d.get("status", ""),
+                    "-",
+                    waktu_keluar_str
+                ])
+
+        if not data_list:
+            raise Exception(f"Tidak ada log untuk tanggal {tanggal_laporan}.")
+
+        df = pd.DataFrame(data_list, columns=["ID", "Plat", "Status", "Waktu Masuk", "Waktu Keluar"])
+
+        # PATH PDF
+        reports_dir = os.path.join(BASE_DIR, "../reports/records/log_kendaraan")
         os.makedirs(reports_dir, exist_ok=True)
-        filename = os.path.join(reports_dir, f"laporan_{tanggal}.pdf")
-
+        filename = os.path.join(reports_dir, f"laporan_gate_{tanggal_laporan}.pdf")
         if os.path.exists(filename):
             os.remove(filename)
 
-        pdf = SimpleDocTemplate(filename)
-        data = [df.columns.tolist()] + df.values.tolist()
-        table = Table(data)
-        style = TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.gray),
-            ('TEXTCOLOR',(0,0),(-1,0),colors.whitesmoke),
-            ('ALIGN',(0,0),(-1,-1),'CENTER'),
-            ('GRID', (0,0), (-1,-1), 1, colors.black),
-        ])
-        table.setStyle(style)
-        pdf.build([table])
+        doc = SimpleDocTemplate(filename, pagesize=A4)
+        story = []
 
-        with pikepdf.open(filename, allow_overwriting_input=True) as pdf_file:
-            pdf_file.save(filename, encryption=pikepdf.Encryption(owner=PDF_PASSWORD, user=PDF_PASSWORD, R=4))
+        # STYLES
+        judul_style = ParagraphStyle(name="Judul", fontName="Poppins-Bold", fontSize=18, alignment=1, spaceAfter=6)
+        tanggal_style = ParagraphStyle(name="Tanggal", fontName="Poppins", fontSize=12, alignment=1, spaceAfter=20)
+        footer_style = ParagraphStyle(name="footer", fontName="Poppins", fontSize=10, alignment=1,
+                                      textColor=colors.HexColor("#777777"), leading=14)
 
-        if os.path.exists(filename):
-            print(f"✅ PDF berhasil dibuat dan diproteksi: {filename}")
-            tulis_log(f"PDF dibuat & diproteksi: {filename}")
-            kirim_email_admin(filename)
-        else:
-            print("❌ PDF gagal dibuat!")
-            tulis_log("PDF gagal dibuat!")
-
-    except Exception as e:
-        print(f"❌ Error buat laporan PDF: {e}")
-        tulis_log(f"Error buat laporan PDF: {e}")
-
-# ================= Email ===================
-def kirim_email_admin(file_path):
-    """Kirim PDF ke email admin otomatis (HTML + logo lokal)"""
-    try:
-        msg = EmailMessage()
-        msg['Subject'] = "Laporan Harian Smart Gate AI"
-        msg['From'] = EMAIL_ADDRESS
-        msg['To'] = TO_EMAIL
-
-        tanggal = datetime.now().strftime("%d %B %Y")
-
-        # Path ke logo lokal
-        logo_path = os.path.join(os.path.dirname(__file__), "../assets/Logo-UIB.webp")
-
-        # Buat content ID unik buat logo inline
-        logo_cid = make_msgid(domain="smartgate.local")
-
-        html_content = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; color: #333;">
-            <div style="text-align: center; padding: 20px;">
-                <img src="cid:{logo_cid[1:-1]}" alt="Smart Gate AI" width="120"/>
-                <h2 style="color: #0078D7;">Smart Gate AI</h2>
-            </div>
-            <p>Yth. Admin,</p>
-            <p>Berikut terlampir laporan harian sistem <b>Smart Gate AI</b> untuk tanggal <b>{tanggal}</b>.</p>
-            <p>File laporan dilindungi dengan password demi keamanan data.</p>
-            <p>Terima kasih atas perhatian dan kerjasamanya.</p>
-            <br>
-            <p>Hormat kami,<br><b>Sistem Smart Gate AI</b></p>
-            <hr style="margin-top: 30px; border: none; border-top: 1px solid #ccc;">
-            <p style="font-size: 12px; color: #888;">Email ini dikirim otomatis oleh sistem Smart Gate AI. Mohon tidak membalas email ini.</p>
-        </body>
-        </html>
-        """
-
-        msg.add_alternative(html_content, subtype='html')
-
-        # Tambah logo inline ke email
+        # HEADER
+        logo_path = os.path.join(BASE_DIR, "../assets/logo-2.png")
         if os.path.exists(logo_path):
-            with open(logo_path, 'rb') as img:
-                msg.get_payload()[0].add_related(img.read(), 'image', 'png', cid=logo_cid)
-        else:
-            print("⚠️ Logo tidak ditemukan, lanjut tanpa gambar.")
+            img = Image(logo_path, width=85, height=85)
+            img.hAlign = "CENTER"
+            story.append(img)
+            story.append(Spacer(1, 10))
 
-        # Lampirkan file laporan PDF
-        with open(file_path, 'rb') as f:
-            msg.add_attachment(f.read(), maintype='application', subtype='pdf', filename=os.path.basename(file_path))
+        story.append(Paragraph("Laporan Harian Smart Gate AI", judul_style))
+        story.append(Paragraph(f"Tanggal Laporan: {tanggal_laporan}", tanggal_style))
 
-        # Kirim email via SMTP Gmail
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-            smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-            smtp.send_message(msg)
+        # TABLE
+        table = Table([df.columns.tolist()] + df.values.tolist(),
+                      colWidths=[2.3*cm, 3*cm, 2.5*cm, 4*cm, 4*cm])
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#795FFC")),
+            ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+            ("FONTNAME", (0,0), (-1,0), "Poppins-Bold"),
+            ("FONTSIZE", (0,0), (-1,0), 11),
+            ("FONTNAME", (0,1), (-1,-1), "Poppins"),
+            ("FONTSIZE", (0,1), (-1,-1), 10),
+            ("ALIGN", (0,0), (-1,-1), "CENTER"),
+            ("GRID", (0,0), (-1,-1), 0.4, colors.HexColor("#D2D2D2")),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.HexColor("#F5F0FF"), colors.white])
+        ]))
+        story.append(table)
+        story.append(Spacer(1, 20))
 
-        print(f"📧 PDF berhasil dikirim ke {TO_EMAIL}")
-        tulis_log(f"PDF dikirim ke {TO_EMAIL}")
+        # FOOTER
+        footer = Paragraph("Laporan ini dihasilkan otomatis oleh Smart Gate AI.<br/>", footer_style)
+        story.append(footer)
+
+        doc.build(story)
+
+        # ENCRYPT PDF
+        with pikepdf.open(filename, allow_overwriting_input=True) as pdf:
+            pdf.save(filename, encryption=pikepdf.Encryption(user=PDF_PASSWORD, owner=PDF_PASSWORD, R=4))
+
+        tulis_log(f"PDF laporan dibuat untuk tanggal {tanggal_laporan}.")
+        print("PDF dibuat:", filename)
+
+        # KIRIM EMAIL
+        kirim_email_admin(filename)
 
     except Exception as e:
-        print(f"❌ Gagal kirim email: {e}")
-        tulis_log(f"Gagal kirim email: {e}")
+        tulis_log(f"PDF Error: {e}")
+        print("❌ PDF ERROR:", e)
